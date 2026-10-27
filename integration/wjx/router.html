@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>购物任务 Shopping Task</title>
+<style>
+  /* Router for 问卷星 / 见数: assigns a participant ID and condition, shows the task full-screen,
+     then shows one code (ID + completion code) to paste back into the survey. */
+  :root { --bg: #f5f6f8; --surface: #ffffff; --fg: #1d2330; --muted: #5d6676; --line: #dde1e8; --brand: #2f5bd3; --brand-ink: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #12151b; --surface: #1b1f27; --fg: #e8ebf1; --muted: #9aa3b2; --line: #2d3340; --brand: #7e9bf0; --brand-ink: #0f1420; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #12151b; --surface: #1b1f27; --fg: #e8ebf1; --muted: #9aa3b2; --line: #2d3340; --brand: #7e9bf0; --brand-ink: #0f1420; color-scheme: dark; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; }
+  .done { max-width: 560px; margin: 0 auto; padding: 32px 16px; display: grid; gap: 14px; justify-items: start; }
+  .done h1 { margin: 0; font-size: 20px; }
+  .done p { margin: 0; }
+  .code { font: 600 22px/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .06em; padding: 10px 14px;
+          border: 1px dashed var(--muted); border-radius: 8px; background: var(--surface); word-break: break-all; user-select: all; }
+  button { font: inherit; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; background: var(--brand); color: var(--brand-ink); cursor: pointer; }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+  /* ======================= SETTINGS: edit these ======================= */
+  // Address of the stimulus page, relative to this file or a full https:// URL.
+  var TASK_URL = '../../shopping_task_standalone.html';
+  // Language when the link has no ?lang=...  ('zh' or 'en')
+  var DEFAULT_LANG = 'zh';
+  /* ==================================================================== */
+
+  var qs = new URLSearchParams(location.search);
+  var lang = (qs.get('lang') || DEFAULT_LANG) === 'en' ? 'en' : 'zh';
+  var TXT = {
+    zh: { h: '任务已完成', p: '请复制下面这一整串代码，回到问卷，粘贴到“完成码”题目中：', copy: '复制代码', copied: '已复制', note: '代码包含你的参与编号，请完整复制（包括所有短横线）。' },
+    en: { h: 'Task complete', p: 'Copy the whole code below, return to the survey, and paste it into the completion-code question:', copy: 'Copy code', copied: 'Copied', note: 'The code includes your participant ID. Please copy all of it, including the dashes.' }
+  }[lang];
+
+  // Same 32-bit FNV-1a hash as seedFrom() in the stimulus page.
+  function seedFrom(s) { var h = 2166136261; for (var ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+  // Random 6-character ID without look-alike characters (no 0/O, 1/I/L).
+  function newPid() {
+    var abc = '23456789ABCDEFGHJKMNPQRSTUVWXYZ', out = '', buf = new Uint32Array(6);
+    crypto.getRandomValues(buf);
+    for (var i = 0; i < 6; i++) out += abc[buf[i] % abc.length];
+    return out;
+  }
+
+  // Remember the assignment on this device, so reloading the link keeps the same ID and condition.
+  var KEY = 'shopping_task_router_v1';
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } }
+  function store(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* storage blocked */ } }
+
+  // Priority: IDs/conditions in the link (pre-generated link list) > saved on this device > new random ID.
+  var urlPid = (qs.get('pid') || '').trim();
+  var urlCond = qs.get('cond');
+  // ?new=1 forgets this device's saved assignment (use between participants on a shared lab computer).
+  var saved = qs.get('new') === '1' ? null : load();
+  var st;
+  if (urlPid) {
+    st = saved && saved.pid === urlPid ? saved : { pid: urlPid };
+  } else {
+    st = saved || { pid: newPid() };
+  }
+  if (/^[1-6]$/.test(urlCond || '')) st.cond = +urlCond;
+  // Condition from the ID's hash: roughly even across people. The 'cond:' prefix keeps it
+  // independent of the page's product order, which is seeded with seedFrom(pid).
+  if (!st.cond) st.cond = (seedFrom('cond:' + st.pid) % 6) + 1;
+  st.lang = lang;
+  store(st);
+
+  var app = document.getElementById('app');
+
+  function showDone(code) {
+    var full = st.pid + '-' + code;
+    app.innerHTML = '<section class="done"><h1>' + TXT.h + '</h1><p>' + TXT.p + '</p>' +
+      '<div class="code" id="code"></div><button id="copy">' + TXT.copy + '</button><p class="muted">' + TXT.note + '</p></section>';
+    document.getElementById('code').textContent = full;
+    var btn = document.getElementById('copy');
+    btn.onclick = function () {
+      function ok() { btn.textContent = TXT.copied; }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(full).then(ok, selectCode);
+      else selectCode();
+    };
+    function selectCode() {
+      var r = document.createRange(); r.selectNodeContents(document.getElementById('code'));
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      try { if (document.execCommand('copy')) btn.textContent = TXT.copied; } catch (e) {}
+    }
+  }
+
+  if (st.code) { showDone(st.code); return; }   // finished earlier on this device: show the same code again
+
+  var frameUrl = new URL(TASK_URL, location.href);
+  var iframe = document.createElement('iframe');
+  iframe.title = lang === 'zh' ? '购物任务' : 'Shopping task';
+  iframe.src = frameUrl.href + '?cond=' + st.cond + '&pid=' + encodeURIComponent(st.pid) + '&lang=' + lang;
+  app.style.height = '100%';
+  app.appendChild(iframe);
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== frameUrl.origin || event.source !== iframe.contentWindow) return;
+    var msg = event.data;
+    if (!msg || msg.type !== 'shopping_task_result' || !msg.data || st.code) return;
+    st.code = msg.data.completion_code;
+    store(st);
+    showDone(st.code);
+  });
+})();
+</script>
+</body>
+</html>
