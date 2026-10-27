@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Earbuds Shopping Task</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+  /* Layout: a plain marketplace results page. Assistant card on top, four product cards below; researcher bar only in preview. */
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --fg: #1d2330;
+    --muted: #5d6676;
+    --line: #dde1e8;
+    --brand: #2f5bd3;
+    --brand-ink: #ffffff;
+    --verify: #1f7a4d;
+    --verify-tint: #e4f3ea;
+    --star: #e09a1b;
+    --research: #fff6dc;
+    --research-line: #e8cf86;
+    --font-ui: "Figtree", "Noto Sans SC", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --surface: #1b1f27; --fg: #e8ebf1; --muted: #9aa3b2; --line: #2d3340;
+      --brand: #7e9bf0; --brand-ink: #0f1420; --verify: #5cc58f; --verify-tint: #183526;
+      --star: #f0b54a; --research: #2c2716; --research-line: #6b5a26; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --surface: #1b1f27; --fg: #e8ebf1; --muted: #9aa3b2; --line: #2d3340;
+    --brand: #7e9bf0; --brand-ink: #0f1420; --verify: #5cc58f; --verify-tint: #183526;
+    --star: #f0b54a; --research: #2c2716; --research-line: #6b5a26; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 48px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .research { background: var(--research); border: 1px solid var(--research-line); border-radius: 8px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; margin-top: 16px; }
+  .research strong { margin-right: 4px; }
+  .research button { border: 1px solid var(--research-line); background: var(--surface); color: var(--fg); border-radius: 6px; padding: 3px 8px; font-size: 12.5px; }
+  .research button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .research .sep { width: 1px; align-self: stretch; background: var(--research-line); }
+
+  header.store { display: flex; align-items: center; gap: 16px; padding-block: 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .logo { font-weight: 700; font-size: 20px; letter-spacing: -0.01em; }
+  .logo span { color: var(--brand); }
+  .search { flex: 1 1 240px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 16px; color: var(--muted); }
+
+  .task { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .task b { color: var(--brand); }
+
+  .agent { background: var(--surface); border: 1.5px solid var(--brand); border-radius: 12px; padding: 18px; display: grid; gap: 12px; }
+  .agent-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+  .agent-name { font-weight: 600; }
+  .agent-sub { color: var(--muted); font-size: 13px; }
+  .badge { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; background: var(--verify-tint); color: var(--verify); border: 1px solid var(--verify); border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; cursor: default; }
+  .rationale { margin: 0; font-size: 16px; max-width: 65ch; }
+  .agent-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; background: var(--brand); color: var(--brand-ink); }
+  .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  .linkbtn { background: none; border: 0; color: var(--brand); font-weight: 600; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+  .checks { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); display: grid; }
+  .checks li { display: grid; grid-template-columns: 24px 1fr; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .checks .tick { color: var(--verify); font-weight: 700; }
+  .checks .what { font-weight: 600; font-size: 14px; }
+  .checks .res { grid-column: 2; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+  .results-h { margin: 4px 0 0; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .thumb { aspect-ratio: 4 / 3; max-width: 100%; border-radius: 8px; background: var(--bg); display: grid; place-items: center; }
+  .thumb svg { width: 56%; height: auto; }
+  .card h3 { margin: 0; font-size: 16px; }
+  .price { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rating { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stars { position: relative; display: inline-block; font-size: 14px; letter-spacing: 1px; color: var(--line); line-height: 1; }
+  .stars i { position: absolute; inset: 0 auto 0 0; overflow: hidden; white-space: nowrap; color: var(--star); font-style: normal; }
+  .specs { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13.5px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .specs dt { color: var(--muted); }
+  .specs dd { margin: 0; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+  .card .btn { width: 100%; margin-top: 4px; }
+
+  .confirm { position: fixed; inset: auto 0 0 0; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(0,0,0,.12);
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .confirm .in { max-width: 980px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .confirm p { margin: 0; flex: 1 1 260px; font-weight: 500; }
+
+  .done { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 28px 20px; display: grid; gap: 12px; justify-items: start; }
+  .done h2 { margin: 0; font-size: 20px; }
+  .code { font-family: var(--font-mono); font-size: 22px; font-weight: 600; letter-spacing: .08em; padding: 8px 14px; border: 1px dashed var(--muted); border-radius: 8px; }
+  pre.data { margin: 0; width: 100%; max-height: 360px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 12px; }
+  @media (prefers-reduced-motion: no-preference) { .checks { animation: open .18s ease-out; } @keyframes open { from { opacity: .4; transform: translateY(-4px); } } }
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function () {
+  const P = {
+    A: { name: 'Auralis A3', usd: 59, rmb: 429, battery: 24, anc: false, rating: 4.2, reviews: 1830, warranty: 12, ipx: 'IPX4', tone: '#8a94a6' },
+    B: { name: 'Nuvo Pods X', usd: 79, rmb: 569, battery: 32, anc: true, rating: 4.6, reviews: 2410, warranty: 18, ipx: 'IPX5', tone: '#3c6fd8' },
+    C: { name: 'Sonique Air', usd: 119, rmb: 859, battery: 30, anc: true, rating: 4.5, reviews: 3120, warranty: 12, ipx: 'IPX4', tone: '#c2843a' },
+    D: { name: 'Kestra Buds 2', usd: 95, rmb: 689, battery: 26, anc: true, rating: 4.3, reviews: 960, warranty: 12, ipx: 'IPX4', tone: '#4a9a7c' }
+  };
+  const BEST = 'B';
+  // Other sellers' prices and review screening, used by check lines 1 and 3.
+  const EVID = {
+    B: { other: { usd: [84, 89], rmb: [599, 639] }, flagged: 3, adj: 4.6 },
+    D: { other: { usd: [99, 104], rmb: [719, 749] }, flagged: 11, adj: 4.1 }
+  };
+  const CONDS = {
+    1: { signal: 'none', quality: 'correct' },  2: { signal: 'none', quality: 'incorrect' },
+    3: { signal: 'badge', quality: 'correct' }, 4: { signal: 'badge', quality: 'incorrect' },
+    5: { signal: 'evidence', quality: 'correct' }, 6: { signal: 'evidence', quality: 'incorrect' }
+  };
+
+  const T = {
+    en: {
+      search: 'wireless earbuds',
+      task: 'Your task: buy a pair of wireless earbuds for yourself. An AI shopping assistant has searched the listings for you. If your final choice is the best-value option, you earn a <b>$0.50 bonus</b>.',
+      agentName: 'AI Shopping Assistant', agentSub: 'Searched 4 listings for you',
+      rationale: n => `I recommend <strong>${n}</strong>. It offers active noise cancelling, long battery life and strong reviews at a competitive price.`,
+      badge: 'Verified by AI', badgeTip: 'This recommendation has been verified.',
+      see: 'See the 5 checks', hide: 'Hide the checks', chooseRec: n => `Choose ${n}`,
+      checks: ['Price compared across 3 sellers', 'Specs matched to manufacturer listing', 'Reviews screened for fakes', 'Cheapest option with noise cancelling', 'Longest battery among the 4 options'],
+      r1: (n, own, o) => `${n}: ${own} here; ${o[0]} and ${o[1]} elsewhere`,
+      r2: p => `${p.battery} h battery, ${p.anc ? 'noise cancelling' : 'no noise cancelling'}, ${p.ipx}: matches`,
+      r3: (p, e) => `${p.reviews.toLocaleString('en-US')} reviews; ${e.flagged}% flagged; adjusted rating ${e.adj.toFixed(1)}`,
+      r4: price => `Nuvo Pods X, ${price}`, r5: 'Nuvo Pods X, 32 h',
+      results: '4 results for “wireless earbuds”',
+      view: 'View details', hideD: 'Hide details', select: 'Select',
+      lab: ['Battery (with case)', 'Noise cancelling', 'Water resistance', 'Warranty'],
+      yes: 'Yes', no: 'No', hours: h => `${h} h`, months: m => `${m} months`,
+      confirm: (n, pr) => `You selected <strong>${n}</strong> for ${pr}. Confirm your purchase?`,
+      confirmBtn: 'Confirm purchase', back: 'Go back',
+      doneH: 'Your choice has been recorded.', doneP: 'Return to the survey and enter this code:'
+    },
+    zh: {
+      search: '无线耳机',
+      task: '任务：请为自己购买一副无线耳机。AI 购物助手已为你检索了商品。如果你最终选择的是性价比最高的商品，你将获得 <b>¥3 额外奖励</b>。',
+      agentName: 'AI 购物助手', agentSub: '已为你检索 4 个商品',
+      rationale: n => `我推荐 <strong>${n}</strong>。它具备主动降噪、长续航，评价优秀，价格有竞争力。`,
+      badge: 'AI 已验证', badgeTip: '该推荐已通过验证。',
+      see: '查看 5 项核查', hide: '收起核查', chooseRec: n => `选择 ${n}`,
+      checks: ['比较 3 家卖家的价格', '规格与厂商信息核对', '筛查虚假评论', '带降噪功能的最低价商品', '4 个商品中续航最长'],
+      r1: (n, own, o) => `${n}：本店 ${own}；其他两家 ${o[0]} 和 ${o[1]}`,
+      r2: p => `续航 ${p.battery} 小时，${p.anc ? '主动降噪' : '无降噪'}，${p.ipx}：一致`,
+      r3: (p, e) => `${p.reviews.toLocaleString('en-US')} 条评论；${e.flagged}% 被标记为可疑；调整后评分 ${e.adj.toFixed(1)}`,
+      r4: price => `Nuvo Pods X，${price}`, r5: 'Nuvo Pods X，32 小时',
+      results: '“无线耳机” 共 4 个结果',
+      view: '查看详情', hideD: '收起详情', select: '选择',
+      lab: ['续航（含充电盒）', '主动降噪', '防水等级', '保修'],
+      yes: '有', no: '无', hours: h => `${h} 小时`, months: m => `${m} 个月`,
+      confirm: (n, pr) => `你选择了 <strong>${n}</strong>（${pr}）。确认购买吗？`,
+      confirmBtn: '确认购买', back: '返回',
+      doneH: '你的选择已记录。', doneP: '请返回问卷并输入以下代码：'
+    }
+  };
+
+  const qs = new URLSearchParams(location.search);
+  const EXPERIMENT = qs.has('cond');
+  const pid = qs.get('pid') || 'preview';
+  let lang = qs.get('lang') === 'zh' ? 'zh' : 'en';
+  let cond = EXPERIMENT ? Math.min(6, Math.max(1, parseInt(qs.get('cond'), 10) || 1)) : (parseInt((location.hash.match(/^#c([1-6])$/) || [])[1], 10) || 5);
+
+  // Seeded shuffle so a participant's product order is stable across reloads.
+  function seedFrom(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function order() {
+    const o = ['A', 'B', 'C', 'D'];
+    if (!EXPERIMENT) return o;
+    const r = rng(seedFrom(pid));
+    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    return o;
+  }
+
+  let S;
+  function reset() {
+    S = { t0: performance.now(), events: [], order: order(), detailsOpen: {}, detailsCount: { A: 0, B: 0, C: 0, D: 0 },
+          evidenceOpen: false, evidenceOpens: 0, evidenceSince: 0, evidenceMs: 0, pending: null, choice: null, viaAgentButton: false, result: null };
+    log('page_load', { cond, lang, order: S.order.join('') });
+  }
+  function now() { return Math.round(performance.now() - S.t0); }
+  function log(type, extra) { S.events.push(Object.assign({ t: now(), type }, extra || {})); }
+
+  const c = () => CONDS[cond];
+  const rec = () => (c().quality === 'correct' ? 'B' : 'D');
+  const t = () => T[lang];
+  const price = (key) => (lang === 'zh' ? `¥${P[key].rmb}` : `$${P[key].usd}`);
+  const money = (v) => (lang === 'zh' ? `¥${v}` : `$${v}`);
+
+  function thumb(tone) {
+    return `<svg viewBox="0 0 120 80" aria-hidden="true"><g fill="${tone}"><rect x="22" y="14" width="26" height="30" rx="13"/><rect x="31" y="36" width="9" height="32" rx="4.5"/><rect x="72" y="14" width="26" height="30" rx="13"/><rect x="80" y="36" width="9" height="32" rx="4.5"/></g><g fill="#ffffff" opacity=".35"><circle cx="35" cy="26" r="5"/><circle cx="85" cy="26" r="5"/></g></svg>`;
+  }
+  function stars(r) { return `<span class="stars" aria-label="${r} / 5">★★★★★<i style="width:${(r / 5) * 100}%">★★★★★</i></span>`; }
+
+  function checksHTML() {
+    const k = rec(), p = P[k], e = EVID[k], o = e.other[lang === 'zh' ? 'rmb' : 'usd'].map(money), L = t();
+    const res = [L.r1(p.name, price(k), o), L.r2(p), L.r3(p, e), L.r4(price('B')), L.r5];
+    return `<ul class="checks" id="checks">${L.checks.map((w, i) => `<li><span class="tick">✓</span><span class="what">${w}</span><span class="res">${res[i]}</span></li>`).join('')}</ul>`;
+  }
+
+  function render() {
+    const L = t(), k = rec(), app = document.getElementById('app');
+    let h = '';
+    if (!EXPERIMENT) {
+      h += `<div class="research" role="toolbar" aria-label="Researcher preview"><strong>Researcher preview</strong>
+        ${[1, 2, 3, 4, 5, 6].map(n => `<button data-cond="${n}" aria-pressed="${n === cond}">C${n} ${CONDS[n].signal} · ${CONDS[n].quality}</button>`).join('')}
+        <span class="sep"></span><button data-lang="en" aria-pressed="${lang === 'en'}">EN</button><button data-lang="zh" aria-pressed="${lang === 'zh'}">中文</button>
+        <button data-restart>Restart</button></div>`;
+    }
+    h += `<header class="store"><div class="logo">bright<span>cart</span></div><div class="search" aria-hidden="true">${L.search}</div></header>`;
+    if (S.result) { app.innerHTML = h + doneHTML(); bind(); return; }
+    h += `<div class="task">${L.task}</div>`;
+    const sig = c().signal;
+    h += `<section class="agent" aria-label="${L.agentName}">
+      <div class="agent-head"><div class="avatar">AI</div><div><div class="agent-name">${L.agentName}</div><div class="agent-sub">${L.agentSub}</div></div>
+      ${sig !== 'none' ? `<span class="badge" id="badge" title="${L.badgeTip}" tabindex="0">✓ ${L.badge}</span>` : ''}</div>
+      <p class="rationale">${L.rationale(P[k].name)}</p>
+      <div class="agent-actions"><button class="btn" data-choose="${k}" data-agent="1">${L.chooseRec(P[k].name)}</button>
+      ${sig === 'evidence' ? `<button class="linkbtn" id="evtoggle" aria-expanded="${S.evidenceOpen}" aria-controls="checks">${S.evidenceOpen ? L.hide : L.see}</button>` : ''}</div>
+      ${sig === 'evidence' && S.evidenceOpen ? checksHTML() : ''}
+    </section>`;
+    h += `<h2 class="results-h">${L.results}</h2><div class="grid">`;
+    for (const key of S.order) {
+      const p = P[key], open = !!S.detailsOpen[key];
+      h += `<article class="card"><div class="thumb">${thumb(p.tone)}</div><h3>${p.name}</h3><div class="price">${price(key)}</div>
+        <div class="rating">${stars(p.rating)} ${p.rating.toFixed(1)} <span>(${p.reviews.toLocaleString('en-US')})</span></div>
+        <button class="linkbtn" data-details="${key}" aria-expanded="${open}">${open ? L.hideD : L.view}</button>
+        ${open ? `<dl class="specs"><dt>${L.lab[0]}</dt><dd>${L.hours(p.battery)}</dd><dt>${L.lab[1]}</dt><dd>${p.anc ? L.yes : L.no}</dd><dt>${L.lab[2]}</dt><dd>${p.ipx}</dd><dt>${L.lab[3]}</dt><dd>${L.months(p.warranty)}</dd></dl>` : ''}
+        <button class="btn ghost" data-choose="${key}">${L.select}</button></article>`;
+    }
+    h += `</div>`;
+    if (S.pending) {
+      h += `<div class="confirm" role="dialog" aria-live="polite"><div class="in"><p>${L.confirm(P[S.pending].name, price(S.pending))}</p>
+        <button class="btn" id="confirmBtn">${L.confirmBtn}</button><button class="btn ghost" id="backBtn">${L.back}</button></div></div>`;
+    }
+    app.innerHTML = h;
+    bind();
+  }
+
+  function doneHTML() {
+    const L = t(), r = S.result;
+    let h = `<section class="done"><h2>${L.doneH}</h2><p>${L.doneP}</p><div class="code">${r.completion_code}</div>`;
+    if (!EXPERIMENT) h += `<p style="margin:8px 0 0;color:var(--muted);font-size:13px">Researcher view: the record below is what the page sends to the survey.</p><pre class="data">${JSON.stringify(r, null, 2)}</pre>`;
+    return h + `</section>`;
+  }
+
+  function closeEvidence() { if (S.evidenceOpen) { S.evidenceMs += performance.now() - S.evidenceSince; S.evidenceOpen = false; } }
+
+  function finish() {
+    closeEvidence();
+    const k = S.pending, rk = rec();
+    S.choice = k;
+    const code = `${cond}${k}${S.evidenceOpens > 0 ? 'E' : 'N'}-${(seedFrom(pid + cond + k) % 46656).toString(36).toUpperCase().padStart(3, '0')}`;
+    S.result = {
+      pid, cond, signal: c().signal, quality: c().quality, lang, product_order: S.order.join(''),
+      recommended: rk, choice: k, accepted_recommendation: k === rk, chose_best_value: k === BEST,
+      chose_via_agent_button: S.viaAgentButton,
+      evidence_opened: S.evidenceOpens > 0, evidence_open_count: S.evidenceOpens, evidence_ms: Math.round(S.evidenceMs),
+      details_opened: S.detailsCount, details_total: Object.values(S.detailsCount).reduce((a, b) => a + b, 0),
+      total_ms: now(), completion_code: code, events: S.events
+    };
+    log('confirm', { choice: k });
+    try { window.parent.postMessage({ type: 'shopping_task_result', data: S.result }, '*'); } catch (e) { /* not embedded */ }
+    S.pending = null;
+    render();
+  }
+
+  function bind() {
+    const app = document.getElementById('app');
+    app.querySelectorAll('[data-cond]').forEach(b => b.onclick = () => { cond = +b.dataset.cond; try { history.replaceState(null, '', '#c' + cond); } catch (e) {} reset(); render(); });
+    app.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { lang = b.dataset.lang; reset(); render(); });
+    const rs = app.querySelector('[data-restart]'); if (rs) rs.onclick = () => { reset(); render(); };
+    const badge = document.getElementById('badge');
+    if (badge) { badge.onmouseenter = () => log('badge_hover'); badge.onfocus = () => log('badge_hover'); }
+    const ev = document.getElementById('evtoggle');
+    if (ev) ev.onclick = () => {
+      if (S.evidenceOpen) { closeEvidence(); log('evidence_close'); }
+      else { S.evidenceOpen = true; S.evidenceOpens++; S.evidenceSince = performance.now(); log('evidence_open'); }
+      render();
+    };
+    app.querySelectorAll('[data-details]').forEach(b => b.onclick = () => {
+      const k = b.dataset.details; S.detailsOpen[k] = !S.detailsOpen[k];
+      if (S.detailsOpen[k]) S.detailsCount[k]++;
+      log(S.detailsOpen[k] ? 'details_open' : 'details_close', { product: k }); render();
+    });
+    app.querySelectorAll('[data-choose]').forEach(b => b.onclick = () => {
+      S.pending = b.dataset.choose; S.viaAgentButton = !!b.dataset.agent;
+      log('select', { product: S.pending, via_agent: S.viaAgentButton }); render();
+      const cb = document.getElementById('confirmBtn'); if (cb) cb.focus();
+    });
+    const cb = document.getElementById('confirmBtn'); if (cb) cb.onclick = finish;
+    const bk = document.getElementById('backBtn'); if (bk) bk.onclick = () => { log('cancel', { product: S.pending }); S.pending = null; render(); };
+  }
+
+  reset();
+  render();
+})();
+</script>
+
+</body>
+</html>
